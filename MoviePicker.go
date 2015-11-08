@@ -3,30 +3,25 @@ package main
 import (
 	"fmt"
 	"github.com/jmcvetta/napping"
-//	"gopkg.in/jmcvetta/napping.v3"
 	"log"
 	"net/url"
 )
 
 type Film struct{
-	Id 								 uint64 `json:"id"`
-	Adult 						 bool	 `json:"adult"`
-	GenreIDs					 []int `json:"genre_ids"`
-	BackdropPath			 string `json:"backdrop_path"`
-	OriginalLanguage  string `json:"original_language" `
-	OriginalTitle  	 string `json:"original_title" `
-	Overview					 string `json:"overview"`
-	PosterPath				 string `json:"poster_path"`
-	Popularity				 float32 `json:"popularity"`
-	ReleaseDate 			 string `json:"release_date"`
-	Title 					 	 string `json:"title"`
-	Video							 bool `json:"video"`	
-	VoteAverage 			 float32 `json:"vote_average"`
-	VoteCount 				 int32 `json:"vote_count"`
-}
-type resultNum struct{
-	TotalPages				int `json:"total_pages"`
-	TotalResults			int `json:"total_results"`
+	Id 							uint64 `json:"id"`
+	Adult 						bool	 `json:"adult"`
+	GenreIDs					[]int `json:"genre_ids"`
+	BackdropPath			 	string `json:"backdrop_path"`
+	OriginalLanguage  			string `json:"original_language" `
+	OriginalTitle  	 			string `json:"original_title" `
+	Overview					string `json:"overview"`
+	PosterPath				 	string `json:"poster_path"`
+	Popularity				 	float32 `json:"popularity"`
+	ReleaseDate 			 	string `json:"release_date"`
+	Title 					 	string `json:"title"`
+	Video						bool `json:"video"`	
+	VoteAverage 			 	float32 `json:"vote_average"`
+	VoteCount 				 	int32 `json:"vote_count"`
 }
 	
 func init() {
@@ -34,6 +29,14 @@ func init() {
 }
 
 func main() {
+	
+	film := "Jame Bond"
+	search(film)
+}
+
+// Find Films on TMDB
+
+func search(film string) {
 	//
 	// Struct to hold error response
 	//
@@ -44,15 +47,15 @@ func main() {
 	// Define Search query as a URL keys and values
 	search := url.Values{}
 	search.Set("api_key","6442b8ee0e13c4415af27562719f67e9")
-	search.Add("query","james bond")
+	search.Add("query",film)
 	// Print search !
 	fmt.Println(search.Encode())
 	// Define Results as an array of Films !
 	result := struct{
-		Page 					int `json:"page"`
+		Page 				int `json:"page"`
 		Results 			[]Film `json:"results"`
-		TotalPages 	int `json:"total_page"`
-		TotalResults int `json:"total_results"`
+		TotalPages 			int `json:"total_page"`
+		TotalResults 		int `json:"total_results"`
 	}{}
 	//Hope that works !
 	
@@ -78,7 +81,6 @@ func main() {
 		// fmt.Printf("Result: %s\n\n", resp.response)
 		// resp.Unmarshal(&e)
 		// Iterate through the results
-		fmt.Printf("%#v\n", result)
 		for index,film := range result.Results {
 			fmt.Println("Index :",index)
 			fmt.Println("Title :", film.Title)
