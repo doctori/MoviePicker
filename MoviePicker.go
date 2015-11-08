@@ -3,11 +3,22 @@ package main
 import (
 	"fmt"
 	"github.com/jmcvetta/napping"
+	"github.com/BurntSushi/toml"
 	"log"
 	"flag"
 	"net/url"
 )
-
+type TmdbConfig struct{
+	URL 	string
+	ApiKey  string
+}
+type Omdbconfig struct{
+	URL 	string
+}
+type Config struct{
+	TMDB 	TmdbConfig
+	OMDB 	Omdbconfig
+}
 type Film struct{
 	Id 							uint64 `json:"id"`
 	Adult 						bool `json:"adult"`
@@ -33,8 +44,15 @@ type OMDBFilmSearchResult struct{
 
 }
 
+var conf Config
+
 func init() {
 	log.SetFlags(log.Ltime | log.Lshortfile)
+
+	if _, err := toml.DecodeFile("conf.toml", &conf); err != nil {
+  	log.Fatal("Could Not Load Configuration")
+  	return
+  	}
 }
 
 func main() {
@@ -64,7 +82,7 @@ func searchOMDB(film string) {
 		Results 		[]OMDBFilmSearchResult `json:"Search"`
 	}{}
   	
-  	url := "https://omdbapi.com/"
+  	url := conf.OMDB.URL
   	getRESTResponse(url,&search,&result)
 	// Iterate through the results
 	for index,film := range result.Results {
@@ -75,7 +93,6 @@ func searchOMDB(film string) {
 }
 
 func getOMDBDetails(IMDBID string){
-
 }
 // Find Films on TMDB
 
@@ -83,7 +100,7 @@ func searchTMDB(film string) {
 	
 	// Define Search query as a URL keys and values
 	search := url.Values{}
-	search.Set("api_key","6442b8ee0e13c4415af27562719f67e9")
+	search.Set("api_key",conf.TMDB.ApiKey)
 	search.Add("query",film)
 	// Define Results as an array of Films !
 	result := struct{
@@ -94,7 +111,7 @@ func searchTMDB(film string) {
 	}{}
 	//Hope that works !
 	
-  	url := "https://api.themoviedb.org/3/search/movie"
+  	url := conf.TMDB.URL
   	getRESTResponse(url,&search,&result)
   
 	// Iterate through the results
