@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/jmcvetta/napping"
 	"github.com/BurntSushi/toml"
 	"log"
@@ -35,6 +34,42 @@ type Film struct{
 	VoteAverage 				float32 `json:"vote_average"`
 	VoteCount 					int32 `json:"vote_count"`
 }
+type OMDBFilm struct{
+	Title 						string
+	Year 						string
+	Rated 						string
+	Released 					string
+	Runtime 					string
+	Genre 						string
+	Director 					string
+	Writer 						string
+	Actors 						string
+	Plot 						string
+	Language 					string
+	Country						string
+	Awards 						string
+	Poster 						string
+	Metascore 					string
+	IMDBRating 					string `json:"imdbRating"`
+	IMDBVotes					string `json:"imdbVotes"`
+	IMDBID  					string `json:"imdbID"`
+	Type 						string 
+	TomatoMeter 				string `json:"tomatoMeter"`
+  	TomatoImage 				string `json:"tomatoImage"`
+  	TomatoRating 				string `json:"tomatoRating"`
+    TomatoReviews 				string `json:"tomatoReviews"`
+  	TomatoFresh 				string `json:"tomatoFresh"`
+   	TomatoRotten 				string `json:"tomatoRotten"`
+  	TomatoConsensus				string `json:"tomatoConsensus"`
+  	TomatoUserMeter				string `json:"tomatoUserMeter"`
+  	TomatoUserRating 			string `json:"tomatoUserRating"`
+  	TomatoUserReviews 			string `json:"tomatoUserReviews"`
+  	DVD							string
+  	BoxOffice					string 
+  	Production					string
+  	Website 					string
+    Response 					string
+}
 type OMDBFilmSearchResult struct{
 	Title 						string
 	Year 						string
@@ -60,12 +95,12 @@ func main() {
 	// we retrieve the movie name
 	flag.StringVar(&movie,"movie","James Bond","The Name of the movie you are looking for")
 	flag.Parse()
-	fmt.Println(" ---- TMDB ---- ")
+	log.Println(" ---- TMDB ---- ")
 	searchTMDB(movie)
-	fmt.Println("--------------------------------------------------------------------------------")
-	fmt.Println(" ---- OMDB ---- ")
+	log.Println("--------------------------------------------------------------------------------")
+	log.Println(" ---- OMDB ---- ")
 	searchOMDB(movie)
-	fmt.Println("--------------------------------------------------------------------------------")
+	log.Println("--------------------------------------------------------------------------------")
 	println("")
 }
 
@@ -82,17 +117,27 @@ func searchOMDB(film string) {
 		Results 		[]OMDBFilmSearchResult `json:"Search"`
 	}{}
   	
-  	url := conf.OMDB.URL
-  	getRESTResponse(url,&search,&result)
+  	getRESTResponse(conf.OMDB.URL,&search,&result)
 	// Iterate through the results
 	for index,film := range result.Results {
-		fmt.Println("Index :",index)
-		fmt.Println("Title :", film.Title)
-		fmt.Println("imdbID : ",film.IMDBID)
+		log.Println("Index :",index)
+		log.Println("Title :", film.Title)
+		log.Println("imdbID : ",film.IMDBID)
+		getOMDBDetails(film.IMDBID)
 	}
 }
 
 func getOMDBDetails(IMDBID string){
+	search := url.Values{}
+	search.Set("i",IMDBID)
+	search.Add("type","movie")
+	search.Add("tomatoes","true")
+	var result OMDBFilm
+	getRESTResponse(conf.OMDB.URL,&search,&result)
+
+	log.Println("Title :",result.Title)
+	log.Println("* IMDB Rating : ",result.IMDBRating )
+	log.Println("* RottenTomato Rating : ",result.TomatoRating)
 }
 // Find Films on TMDB
 
@@ -116,9 +161,9 @@ func searchTMDB(film string) {
   
 	// Iterate through the results
 	for index,film := range result.Results {
-		fmt.Println("Index :",index)
-		fmt.Println("Title :", film.Title)
-		fmt.Println("Note : ",film.VoteAverage)
+		log.Println("Index :",index)
+		log.Printf("Title : %s [%s]", film.Title,film.ReleaseDate)
+		log.Println("Note : ",film.VoteAverage)
 	}
 
 }
@@ -131,13 +176,11 @@ func getRESTResponse(url string, p *url.Values, result interface{}){
 		Message string
 	}{}
 
-	log.Println("URL => ", url)
 	s := napping.Session{}
 	resp, err := s.Get(url,p,result,e)
 	if err != nil {
   		log.Fatal(err)
   	}
-  	log.Println("Response Status:",resp.Status())
   	if resp.Status() == 200 {
   		return
   	} else {
