@@ -4,12 +4,16 @@ import (
 	"github.com/jmcvetta/napping"
 	"github.com/BurntSushi/toml"
 	"log"
+	"os"
 	"flag"
 	"net/url"
+	"bytes"
+	"fmt"
 )
 type TmdbConfig struct{
-	URL 	string
-	ApiKey  string
+	URL 		string
+	MovieURL 	string
+	ApiKey  	string
 }
 type Omdbconfig struct{
 	URL 	string
@@ -17,6 +21,18 @@ type Omdbconfig struct{
 type Config struct{
 	TMDB 	TmdbConfig
 	OMDB 	Omdbconfig
+}
+type Genre struct {
+	Id 							uint64 `json:"id"`
+	Name 						string `json:"name"`
+}
+type ProdCorp struct{
+	Id 							uint64 `json:"id"`
+	Name 						string `json:"name"`
+}
+type SpokenLanguage struct{
+	Iso639 						string `json:"iso_639_1"`
+	Name 						string `json:"name"`
 }
 type Film struct{
 	Id 							uint64 `json:"id"`
@@ -33,6 +49,27 @@ type Film struct{
 	Video 						bool `json:"video"`	
 	VoteAverage 				float32 `json:"vote_average"`
 	VoteCount 					int32 `json:"vote_count"`
+	IMDBID						string `json:"imdb_id"`
+}
+type TMDBFilm struct{
+	Id 							uint64 `json:"id"`
+	Adult 						bool `json:"adult"`
+	Budget 						uint64 `json:"budget"`
+	Genres 						[]Genre `json:"genre"`
+	Homepage 					string `json:"homepage"`
+	BackdropPath 				string `json:"backdrop_path"`
+	OriginalLanguage 			string `json:"original_language" `
+	OriginalTitle 				string `json:"original_title" `
+	Overview 					string `json:"overview"`
+	PosterPath 					string `json:"poster_path"`
+	Popularity 					float32 `json:"popularity"`
+	ProdCorps 					[]ProdCorp `json:"production_companies"`
+	ReleaseDate 				string `json:"release_date"`
+	Title 						string `json:"title"`
+	Video 						bool `json:"video"`	
+	VoteAverage 				float32 `json:"vote_average"`
+	VoteCount 					int32 `json:"vote_count"`
+	IMDBID						string `json:"imdb_id"`
 }
 type OMDBFilm struct{
 	Title 						string
@@ -78,8 +115,15 @@ type OMDBFilmSearchResult struct{
 	Poster 						string
 
 }
-
-var conf Config
+var (
+	// Log Levels
+    Trace   *log.Logger
+    Info    *log.Logger
+    Warning *log.Logger
+    Error   *log.Logger
+    // Configuration
+    conf Config
+)
 
 func init() {
 	log.SetFlags(log.Ltime | log.Lshortfile)
@@ -88,22 +132,71 @@ func init() {
   	log.Fatal("Could Not Load Configuration")
   	return
   	}
+  	Trace = log.New(os.Stdout,
+        "TRACE  : ",
+        log.Ldate|log.Ltime|log.Lshortfile)
+
+    Info = log.New(os.Stdout,
+        "INFO   : ",
+        log.Ldate|log.Ltime|log.Lshortfile)
+
+    Warning = log.New(os.Stdout,
+        "WARNING: ",
+        log.Ldate|log.Ltime|log.Lshortfile)
+
+    Error = log.New(os.Stderr,
+        "ERROR: ",
+        log.Ldate|log.Ltime|log.Lshortfile)
 }
 
 func main() {
-	movie := "Jame Bond"
 	// we retrieve the movie name
-	flag.StringVar(&movie,"movie","James Bond","The Name of the movie you are looking for")
+	movie :=  flag.String("movie","James Bond","The Name of the movie you are looking for")
+	strict := flag.Bool("strict",false,"Will find the first Movie and get Detailed info on it")
 	flag.Parse()
-	log.Println(" ---- TMDB ---- ")
-	searchTMDB(movie)
-	log.Println("--------------------------------------------------------------------------------")
-	log.Println(" ---- OMDB ---- ")
-	searchOMDB(movie)
-	log.Println("--------------------------------------------------------------------------------")
-	println("")
+	if (*strict){
+		Info.Printf("Will Find this movie [%s] and no one else\n",*movie)
+		IMDBID := getIMDBID(*movie)
+		Trace.Println("IMDéBé : ",IMDBID)
+	}else{
+		Info.Println(" ---- TMDB ---- ")
+		searchTMDB(*movie)
+		Info.Println("--------------------------------------------------------------------------------")
+		Info.Println(" ---- OMDB ---- ")
+		searchOMDB(*movie)
+		Info.Println("--------------------------------------------------------------------------------")
+	
+	}
 }
 
+// Get IMDBID from TMDB (yes)
+func getIMDBID(film string) (IMDBID string){
+	search := url.Values{}
+	search.Set("api_key",conf.TMDB.ApiKey)
+	search.Add("query",film)
+	result := struct{
+		Page 				int `json:"page"`
+		Results 			[]Film `json:"results"`
+		TotalPages 			int `json:"total_page"`
+		TotalResults 		int `json:"total_results"`
+	}{}
+
+  	getRESTResponse(conf.TMDB.URL,&search,&result)
+  	
+	Trace.Printf("Title : %s [%s]", result.Results[0].Title,result.Results[0].ReleaseDate)
+	Trace.Println("Note : ",result.Results[0].VoteAverage)
+	search.Del("query")
+	// Create TMDB URL
+	var buffer bytes.Buffer
+	buffer.WriteString(fmt.Sprint(conf.TMDB.MovieURL,"/",result.Results[0].Id))
+
+	movieURL := buffer.String()
+	var resultDetail TMDBFilm
+	getRESTResponse(movieURL,&search,&resultDetail)
+	Trace.Printf("%v",resultDetail)
+	IMDBID = resultDetail.IMDBID
+	return
+}
 // Find Films on OMDB
 func searchOMDB(film string) {
 
@@ -119,10 +212,7 @@ func searchOMDB(film string) {
   	
   	getRESTResponse(conf.OMDB.URL,&search,&result)
 	// Iterate through the results
-	for index,film := range result.Results {
-		log.Println("Index :",index)
-		log.Println("Title :", film.Title)
-		log.Println("imdbID : ",film.IMDBID)
+	for _,film := range result.Results {
 		getOMDBDetails(film.IMDBID)
 	}
 }
@@ -135,8 +225,8 @@ func getOMDBDetails(IMDBID string){
 	var result OMDBFilm
 	getRESTResponse(conf.OMDB.URL,&search,&result)
 
-	log.Println("Title :",result.Title)
-	log.Println("* IMDB Rating : ",result.IMDBRating )
+	Info.Println("Title :",result.Title)
+	Trace.Println("* IMDB Rating : ",result.IMDBRating )
 	log.Println("* RottenTomato Rating : ",result.TomatoRating)
 }
 // Find Films on TMDB
@@ -162,8 +252,8 @@ func searchTMDB(film string) {
 	// Iterate through the results
 	for index,film := range result.Results {
 		log.Println("Index :",index)
-		log.Printf("Title : %s [%s]", film.Title,film.ReleaseDate)
-		log.Println("Note : ",film.VoteAverage)
+		Trace.Printf("Title : %s [%s]", film.Title,film.ReleaseDate)
+		Trace.Println("Note : ",film.VoteAverage)
 	}
 
 }
@@ -181,6 +271,7 @@ func getRESTResponse(url string, p *url.Values, result interface{}){
 	if err != nil {
   		log.Fatal(err)
   	}
+  	Trace.Printf("%s Return Status [%v]",url,resp.Status())
   	if resp.Status() == 200 {
   		return
   	} else {
