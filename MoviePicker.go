@@ -10,19 +10,19 @@ import (
 
 type Film struct{
 	Id 							uint64 `json:"id"`
-	Adult 						bool	 `json:"adult"`
-	GenreIDs					[]int `json:"genre_ids"`
-	BackdropPath			 	string `json:"backdrop_path"`
-	OriginalLanguage  			string `json:"original_language" `
-	OriginalTitle  	 			string `json:"original_title" `
-	Overview					string `json:"overview"`
-	PosterPath				 	string `json:"poster_path"`
-	Popularity				 	float32 `json:"popularity"`
-	ReleaseDate 			 	string `json:"release_date"`
-	Title 					 	string `json:"title"`
-	Video						bool `json:"video"`	
-	VoteAverage 			 	float32 `json:"vote_average"`
-	VoteCount 				 	int32 `json:"vote_count"`
+	Adult 						bool `json:"adult"`
+	GenreIDs 					[]int `json:"genre_ids"`
+	BackdropPath 				string `json:"backdrop_path"`
+	OriginalLanguage 			string `json:"original_language" `
+	OriginalTitle 				string `json:"original_title" `
+	Overview 					string `json:"overview"`
+	PosterPath 					string `json:"poster_path"`
+	Popularity 					float32 `json:"popularity"`
+	ReleaseDate 				string `json:"release_date"`
+	Title 						string `json:"title"`
+	Video 						bool `json:"video"`	
+	VoteAverage 				float32 `json:"vote_average"`
+	VoteCount 					int32 `json:"vote_count"`
 }
 	
 func init() {
