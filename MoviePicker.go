@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/jmcvetta/napping"
 	"log"
+	"flag"
 	"net/url"
 )
 
@@ -29,9 +30,12 @@ func init() {
 }
 
 func main() {
+	movie := "Jame Bond"
+	// we retrieve the movie name
+	flag.StringVar(&movie,"movie","James Bond","The Name of the movie you are looking for")
+	flag.Parse()
 	
-	film := "Jame Bond"
-	search(film)
+	search(movie)
 }
 
 // Find Films on TMDB
