@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"bytes"
 	"fmt"
+	"runtime"
 )
 type TmdbConfig struct{
 	URL 		string
@@ -125,6 +126,7 @@ var (
     conf Config
 )
 
+
 func init() {
 	log.SetFlags(log.Ltime | log.Lshortfile)
 
@@ -150,14 +152,18 @@ func init() {
 }
 
 func main() {
+	runtime.GOMAXPROCS(2)
 	// we retrieve the movie name
 	movie :=  flag.String("movie","James Bond","The Name of the movie you are looking for")
 	strict := flag.Bool("strict",false,"Will find the first Movie and get Detailed info on it")
 	flag.Parse()
 	if (*strict){
+		// Open Channels 
+		TmdbFilm := make(chan TMDBFilm)
+		go getTMDBDetails(*movie,TmdbFilm)
 		Info.Printf("Will Find this movie [%s] and no one else\n",*movie)
-		IMDBID := getIMDBID(*movie)
-		Trace.Println("IMDéBé : ",IMDBID)
+		film := <-TmdbFilm
+		Trace.Println("IMDéBé : ",film.IMDBID)
 	}else{
 		Info.Println(" ---- TMDB ---- ")
 		searchTMDB(*movie)
@@ -170,7 +176,7 @@ func main() {
 }
 
 // Get IMDBID from TMDB (yes)
-func getIMDBID(film string) (IMDBID string){
+func getTMDBDetails(film string,messages chan TMDBFilm){
 	search := url.Values{}
 	search.Set("api_key",conf.TMDB.ApiKey)
 	search.Add("query",film)
@@ -193,9 +199,12 @@ func getIMDBID(film string) (IMDBID string){
 	movieURL := buffer.String()
 	var resultDetail TMDBFilm
 	getRESTResponse(movieURL,&search,&resultDetail)
-	Trace.Printf("%v",resultDetail)
-	IMDBID = resultDetail.IMDBID
-	return
+	done := make(chan struct{})
+	go cacheTMDBFilm(resultDetail,done)
+	Trace.Printf("%v\n",resultDetail)
+	<-done
+	messages <- resultDetail
+
 }
 // Find Films on OMDB
 func searchOMDB(film string) {
@@ -255,8 +264,8 @@ func searchTMDB(film string) {
 		Trace.Printf("Title : %s [%s]", film.Title,film.ReleaseDate)
 		Trace.Println("Note : ",film.VoteAverage)
 	}
-
 }
+
 
 func getRESTResponse(url string, p *url.Values, result interface{}){
 	//
