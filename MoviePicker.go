@@ -114,7 +114,6 @@ type OMDBFilmSearchResult struct{
 	IMDBID						string
 	Type 						string
 	Poster 						string
-
 }
 var (
 	// Log Levels
@@ -149,6 +148,7 @@ func init() {
     Error = log.New(os.Stderr,
         "ERROR: ",
         log.Ldate|log.Ltime|log.Lshortfile)
+	
 }
 
 func main() {
@@ -177,33 +177,45 @@ func main() {
 
 // Get IMDBID from TMDB (yes)
 func getTMDBDetails(film string,messages chan TMDBFilm){
-	search := url.Values{}
-	search.Set("api_key",conf.TMDB.ApiKey)
-	search.Add("query",film)
-	result := struct{
-		Page 				int `json:"page"`
-		Results 			[]Film `json:"results"`
-		TotalPages 			int `json:"total_page"`
-		TotalResults 		int `json:"total_results"`
-	}{}
+	// Let's check if we this in cache
+	TmdbFilm := make(chan TMDBFilm)
+	foundInCache := make(chan bool)
+	
+	go getTMDBCacheFilm(film,TmdbFilm,foundInCache)
+	
+	if <-foundInCache {
+		cachedFilm := <-TmdbFilm
+		messages <- cachedFilm
+	}else{
+		search := url.Values{}
+		search.Set("api_key",conf.TMDB.ApiKey)
+		search.Add("query",film)
+		result := struct{
+			Page 				int `json:"page"`
+			Results 			[]Film `json:"results"`
+			TotalPages 			int `json:"total_page"`
+			TotalResults 		int `json:"total_results"`
+		}{}
 
-  	getRESTResponse(conf.TMDB.URL,&search,&result)
-  	
-	Trace.Printf("Title : %s [%s]", result.Results[0].Title,result.Results[0].ReleaseDate)
-	Trace.Println("Note : ",result.Results[0].VoteAverage)
-	search.Del("query")
-	// Create TMDB URL
-	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprint(conf.TMDB.MovieURL,"/",result.Results[0].Id))
+	  	getRESTResponse(conf.TMDB.URL,&search,&result)
+	  	
+		Trace.Printf("Title : %s [%s]", result.Results[0].Title,result.Results[0].ReleaseDate)
+		Trace.Println("Note : ",result.Results[0].VoteAverage)
+		search.Del("query")
+		// Create TMDB URL
+		var buffer bytes.Buffer
+		buffer.WriteString(fmt.Sprint(conf.TMDB.MovieURL,"/",result.Results[0].Id))
 
-	movieURL := buffer.String()
-	var resultDetail TMDBFilm
-	getRESTResponse(movieURL,&search,&resultDetail)
-	done := make(chan struct{})
-	go cacheTMDBFilm(resultDetail,done)
-	Trace.Printf("%v\n",resultDetail)
-	<-done
-	messages <- resultDetail
+		movieURL := buffer.String()
+		var resultDetail TMDBFilm
+		getRESTResponse(movieURL,&search,&resultDetail)
+		done := make(chan struct{})
+		go cacheTMDBFilm(resultDetail,done)
+		Trace.Printf("%v\n",resultDetail)
+		<-done
+		messages <- resultDetail	
+	}
+	
 
 }
 // Find Films on OMDB
