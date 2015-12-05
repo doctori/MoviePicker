@@ -31,11 +31,16 @@ type ProdCorp struct{
 	Id 							uint64 `json:"id"`
 	Name 						string `json:"name"`
 }
-type SpokenLanguage struct{
+type SpokenLanguage struct {
 	Iso639 						string `json:"iso_639_1"`
 	Name 						string `json:"name"`
 }
-type Film struct{
+type Collection struct {
+	Id 							uint64 `json:"id"`
+	Name 						string `json:"name"`
+	PosterPath 					string `json:"poster_path"`
+}
+type Film struct {
 	Id 							uint64 `json:"id"`
 	Adult 						bool `json:"adult"`
 	GenreIDs 					[]int `json:"genre_ids"`
@@ -52,10 +57,11 @@ type Film struct{
 	VoteCount 					int32 `json:"vote_count"`
 	IMDBID						string `json:"imdb_id"`
 }
-type TMDBFilm struct{
+type TMDBFilm struct {
 	Id 							uint64 `json:"id"`
 	Adult 						bool `json:"adult"`
 	Budget 						uint64 `json:"budget"`
+	Collection 					Collection `json:"belongs_to_collection"`
 	Genres 						[]Genre `json:"genre"`
 	Homepage 					string `json:"homepage"`
 	BackdropPath 				string `json:"backdrop_path"`
@@ -72,7 +78,7 @@ type TMDBFilm struct{
 	VoteCount 					int32 `json:"vote_count"`
 	IMDBID						string `json:"imdb_id"`
 }
-type OMDBFilm struct{
+type OMDBFilm struct {
 	Title 						string
 	Year 						string
 	Rated 						string
@@ -108,7 +114,7 @@ type OMDBFilm struct{
   	Website 					string
     Response 					string
 }
-type OMDBFilmSearchResult struct{
+type OMDBFilmSearchResult struct {
 	Title 						string
 	Year 						string
 	IMDBID						string
@@ -157,6 +163,13 @@ func main() {
 	movie :=  flag.String("movie","James Bond","The Name of the movie you are looking for")
 	strict := flag.Bool("strict",false,"Will find the first Movie and get Detailed info on it")
 	flag.Parse()
+	
+	// If nothing Given, Go Fuck yourself
+	if(flag.NFlag() <1){
+		Error.Println("Go Fuck yourself")
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
 	if (*strict){
 		// Open Channels 
 		TmdbFilm := make(chan TMDBFilm)
